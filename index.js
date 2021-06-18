@@ -13,8 +13,8 @@ const MAX_WEIGHT = 4_000_000;
 fs.createReadStream("mempool.csv")
   .pipe(csv.parse())
   .on("error", (error) => console.error(error))
-  .on("data", handleRow)
-  .on("end", createBlockTxt);
+  .on("data", handleRow) // handle each row
+  .on("end", createBlockTxt); // after reading the stream
 
 let position = 1;
 function handleRow(row) {
@@ -32,12 +32,12 @@ function handleRow(row) {
 }
 
 function createBlockTxt() {
-  const validTransactions = filterValidTransactions(transactions);
+  const validTransactions = filterValidTransactions(transactions); // Filter valid transactions by their parents
   validTransactions.sort((a, b) =>
     a.feeWeight_ratio > b.feeWeight_ratio ? -1 : 1
-  );
-  const topTransactions = filterTopTransactions(validTransactions);
-  topTransactions.sort((a, b) => (a.order < b.order ? -1 : 1));
+  ); // Sort according to the fee/weight ratio for maximum profit
+  const topTransactions = filterTopTransactions(validTransactions); // Filter the top transaction so that total weight is just less than 4,000,000
+  topTransactions.sort((a, b) => (a.order < b.order ? -1 : 1)); // Sort according to the order so the initial order is retained
   createBlock(topTransactions);
   console.log(block);
   fs.writeFileSync("./block.txt", block.transactions.join("\n"), {
@@ -55,7 +55,7 @@ function filterTopTransactions(transactions) {
     totalWeight += transactions[i].weight;
     i++;
   }
-  console.log;
+  console.log(transactions[i].weight);
 
   return topTransactions;
 }
