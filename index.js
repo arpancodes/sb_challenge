@@ -32,11 +32,14 @@ function handleRow(row) {
 }
 
 function createBlockTxt() {
-  transactions.sort((a, b) => (a.feeWeight_ratio > b.feeWeight_ratio ? -1 : 1));
-  const topTransactions = filterTopTransactions(transactions);
+  const validTransactions = filterValidTransactions(transactions);
+  validTransactions.sort((a, b) =>
+    a.feeWeight_ratio > b.feeWeight_ratio ? -1 : 1
+  );
+  const topTransactions = filterTopTransactions(validTransactions);
   topTransactions.sort((a, b) => (a.order < b.order ? -1 : 1));
   createBlock(topTransactions);
-  console.log(block.transactions.length);
+  console.log(block);
   fs.writeFileSync("./block.txt", block.transactions.join("\n"), {
     encoding: "utf-8",
   });
@@ -44,37 +47,40 @@ function createBlockTxt() {
 
 function filterTopTransactions(transactions) {
   const topTransactions = [];
-  let totalWeight = 0;
-  for (let i = 0; i < transactions.length; i++) {
-    topTransactions.push({ ...transactions[i] });
+  let totalWeight = 0,
+    i = 0;
+
+  while (MAX_WEIGHT > totalWeight + transactions[i].weight) {
+    topTransactions.push(transactions[i]);
     totalWeight += transactions[i].weight;
-    if (totalWeight > MAX_WEIGHT) {
-      break;
-    }
+    i++;
   }
+  console.log;
+
   return topTransactions;
 }
 
 function createBlock(transactions) {
-  console.log(transactions.length);
   transactions.forEach((txn) => {
-    addToBlock(txn);
-  });
-}
-
-function addToBlock(txn) {
-  if (txn.parents.length > 0) {
-    const isParentInBlock = txn.parents.every((parent) =>
-      block.transactions.includes(parent)
-    );
-    if (isParentInBlock) {
-      block.transactions.push(txn.tx_id);
-      block.totalFee += txn.fee;
-      block.totalWeight += txn.weight;
-    }
-  } else {
     block.transactions.push(txn.tx_id);
     block.totalFee += txn.fee;
     block.totalWeight += txn.weight;
-  }
+  });
+}
+
+function filterValidTransactions(transactions) {
+  const validTransactions = [];
+  transactions.forEach((txn) => {
+    if (txn.parents.length > 0) {
+      const isParentInBlock = txn.parents.every((parent) =>
+        validTransactions.some((t) => t.tx_id === parent)
+      );
+      if (isParentInBlock) {
+        validTransactions.push(txn);
+      }
+    } else {
+      validTransactions.push(txn);
+    }
+  });
+  return validTransactions;
 }
